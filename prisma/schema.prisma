@@ -1,0 +1,151 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model Account {
+  id                String  @id @default(auto()) @map("_id") @db.ObjectId
+  userId            String  @map("user_id") @db.ObjectId
+  type              String
+  provider          String
+  providerAccountId String  @map("provider_account_id")
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model User {
+  id                String             @id @default(auto()) @map("_id") @db.ObjectId
+  name              String?
+  email             String?            @unique
+  emailVerified     DateTime?          @default(now()) @map("email_verified")
+  image             String?
+  role              Role               @default(USER)
+  accounts          Account[]
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  completedProblems CompletedProblem[]
+
+  @@map("users")
+}
+
+
+
+model Author {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  bio       String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  problems  Problem[]
+  topics    Topic[]   @relation(references: [id], fields: [topicIds])
+  topicIds  String[]  @db.ObjectId
+
+  @@map("authors")
+}
+
+model Tag {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  topics    Topic[]  @relation(references: [id], fields: [topicIds])
+  topicIds  String[] @db.ObjectId
+
+  @@map("tags")
+}
+
+model Category {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  topics    Topic[]  @relation(references: [id], fields: [topicIds])
+  topicIds  String[] @db.ObjectId
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("categories")
+}
+
+model Topic {
+  id          String     @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  description String
+  difficulty  Difficulty
+  categories  Category[] @relation(references: [id], fields: [categoryIds])
+  categoryIds String[]   @db.ObjectId
+  chapters    Chapter[]
+  authors     Author[]   @relation(references: [id], fields: [authorIds])
+  authorIds   String[]   @db.ObjectId
+  tags        Tag[]      @relation(references: [id], fields: [tagIds])
+  tagIds      String[]   @db.ObjectId
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@map("topics")
+}
+
+model Chapter {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  topic     Topic     @relation(fields: [topicId], references: [id])
+  topicId   String    @db.ObjectId
+  problems  Problem[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@map("chapters")
+}
+
+model Problem {
+  id                String             @id @default(auto()) @map("_id") @db.ObjectId
+  name              String
+  difficulty        Difficulty
+  chapter           Chapter            @relation(fields: [chapterId], references: [id])
+  chapterId         String             @db.ObjectId
+  youtubeLink       String?
+  leetcodeLink      String?
+  articleLink       String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  author            Author             @relation(fields: [authorId], references: [id])
+  authorId          String             @db.ObjectId
+  completedProblems CompletedProblem[]
+
+  @@map("problems")
+}
+
+model CompletedProblem {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  user        User     @relation(fields: [userId], references: [id])
+  userId      String   @db.ObjectId
+  problem     Problem  @relation(fields: [problemId], references: [id])
+  problemId   String   @db.ObjectId
+  completedAt DateTime @default(now())
+
+  @@map("completed_problems")
+}
+
+// Enum for difficulty levels
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
